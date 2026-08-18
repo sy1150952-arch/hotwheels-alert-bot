@@ -1,15 +1,16 @@
-name: Hot Wheels Telegram Bot
+name: Hot Wheels Stock Alert
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
 
 jobs:
-  run-bot:
+  check-stock:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -17,9 +18,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Start Telegram bot
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Check Hot Wheels stock
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        run: |
-          echo "Starting Hot Wheels Telegram Bot..."
-          python bot.py
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python check_stock.py
