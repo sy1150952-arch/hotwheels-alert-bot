@@ -1,0 +1,105 @@
+name: Hot Wheels Stock Checker
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
+
+jobs:
+  check-stock:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Hot Wheels product
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PRODUCT_URL: https://blinkit.com/prn/x/prid/787950
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import urllib.request
+          import urllib.parse
+
+          token = os.environ["TOKEN"]
+          chat_id = os.environ["CHAT_ID"]
+          url = os.environ["PRODUCT_URL"]
+
+          req = urllib.request.Request(
+              url,
+              headers={
+                  "User-Agent": (
+                      "Mozilla/5.0 (Linux; Android 10) "
+                      "AppleWebKit/537.36 Chrome/131.0 Mobile Safari/537.36"
+                  ),
+                  "Accept-Language": "en-IN,en;q=0.9"
+              }
+          )
+
+          try:
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  html = response.read().decode("utf-8", errors="ignore")
+
+              text = re.sub(r"<[^>]+>", " ", html)
+              text = re.sub(r"\s+", " ", text).lower()
+
+              out_words = [
+                  "out of stock",
+                  "currently unavailable",
+                  "not available"
+              ]
+
+              stock_words = [
+                  "add to cart",
+                  '"available":true',
+                  '"in_stock":true'
+              ]
+
+              is_out = any(word in text for word in out_words)
+              is_in = any(word in text for word in stock_words)
+
+              print("Page downloaded successfully.")
+              print("Out-of-stock signal:", is_out)
+              print("In-stock signal:", is_in)
+
+              if is_in and not is_out:
+                  message = (
+                      "🚨🚗 HOT WHEELS STOCK ALERT!\n\n"
+                      "✅ Product appears to be IN STOCK\n"
+                      "📍 Lucknow / PIN 226004\n"
+                      "🆔 Blinkit Product ID: 787950\n\n"
+                      f"🔗 {url}"
+                  )
+
+                  api_url = (
+                      f"https://api.telegram.org/bot{token}/sendMessage"
+                  )
+
+                  data = urllib.parse.urlencode({
+                      "chat_id": chat_id,
+                      "text": message
+                  }).encode()
+
+                  telegram_req = urllib.request.Request(
+                      api_url,
+                      data=data,
+                      method="POST"
+                  )
+
+                  with urllib.request.urlopen(
+                      telegram_req,
+                      timeout=20
+                  ) as telegram_response:
+                      print(
+                          "Telegram:",
+                          telegram_response.read().decode()
+                      )
+
+              else:
+                  print("No confirmed stock detected. No alert sent.")
+
+          except Exception as error:
+              print("Checker error:", repr(error))
+              raise
+          PY
