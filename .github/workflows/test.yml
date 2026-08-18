@@ -15,11 +15,4 @@ jobs:
         run: |
           curl -sS -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
             -d "chat_id=${CHAT_ID}" \
-            --data-urlencode "text=🚗🔥 HOT WHEELS ALERT
-
-✅ Telegram bot connection successful!
-
-📍 Lucknow
-📮 PIN: 226004
-
-Bot is ready for stock checking."
+            --data-urlencode "text=🚗 HOT WHEELS ALERT - Telegram connection successful! Location: Lucknow, PIN: 226004"
