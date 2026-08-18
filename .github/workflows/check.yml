@@ -1,110 +1,18 @@
-name: Hot Wheels Stock Checker
+name: Hot Wheels Telegram Bot
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "*/5 * * * *"
 
 jobs:
-  check-stock:
+  bot:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check Hot Wheels product
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start Telegram bot
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          python - <<'PY'
-          import os
-          import urllib.request
-          import urllib.parse
-          import urllib.error
-
-          BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-          CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
-
-          PRODUCT_ID = "787950"
-          PRODUCT_URL = f"https://blinkit.com/prn/x/prid/{PRODUCT_ID}"
-
-          def telegram(message):
-              url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-              data = urllib.parse.urlencode({
-                  "chat_id": CHAT_ID,
-                  "text": message
-              }).encode()
-
-              req = urllib.request.Request(url, data=data, method="POST")
-
-              try:
-                  urllib.request.urlopen(req, timeout=20)
-              except Exception as e:
-                  print("Telegram error:", e)
-
-          print("Checking Blinkit product...")
-          print("Product ID:", PRODUCT_ID)
-          print("URL:", PRODUCT_URL)
-
-          req = urllib.request.Request(
-              PRODUCT_URL,
-              headers={
-                  "User-Agent": (
-                      "Mozilla/5.0 (Linux; Android 10) "
-                      "AppleWebKit/537.36 "
-                      "(KHTML, like Gecko) "
-                      "Chrome/131.0 Mobile Safari/537.36"
-                  ),
-                  "Accept": "text/html,application/xhtml+xml",
-                  "Accept-Language": "en-IN,en;q=0.9",
-              }
-          )
-
-          try:
-              with urllib.request.urlopen(req, timeout=30) as response:
-                  status = response.status
-                  html = response.read().decode("utf-8", errors="ignore")
-
-              print("HTTP status:", status)
-              print("Page received:", len(html), "bytes")
-
-              # Do NOT claim stock from a normal webpage response.
-              # Blinkit's availability is location/session dependent.
-              telegram(
-                  "🔎 Hot Wheels checker ran successfully.\n\n"
-                  f"Product ID: {PRODUCT_ID}\n"
-                  "📍 Location: Lucknow 226004\n\n"
-                  "⚠️ Blinkit page was reachable, but this workflow "
-                  "cannot reliably determine location-specific stock "
-                  "from the public product page."
-              )
-
-          except urllib.error.HTTPError as e:
-              print("HTTP error:", e.code, e.reason)
-
-              if e.code == 403:
-                  telegram(
-                      "⚠️ Hot Wheels checker\n\n"
-                      "Blinkit returned HTTP 403 (Forbidden).\n\n"
-                      f"Product ID: {PRODUCT_ID}\n"
-                      "📍 Lucknow 226004\n\n"
-                      "Blinkit is blocking the automated request, "
-                      "so stock status was NOT guessed."
-                  )
-              else:
-                  telegram(
-                      "❌ Hot Wheels checker error\n\n"
-                      f"HTTP {e.code}: {e.reason}\n"
-                      f"Product ID: {PRODUCT_ID}"
-                  )
-
-          except Exception as e:
-              print("Checker error:", repr(e))
-
-              telegram(
-                  "❌ Hot Wheels checker error\n\n"
-                  f"Product ID: {PRODUCT_ID}\n"
-                  f"Error: {type(e).__name__}"
-              )
-
-          print("Checker finished.")
-          PY
+          python3 bot.py
